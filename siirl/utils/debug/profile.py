@@ -192,31 +192,3 @@ class DistProfiler:
             return func
 
         return decorator
-
-
-class DistProfilerExtension:
-    """An extension class for DistProfiler that provides distributed profiling capabilities.
-
-    It is intended for workers in verl that single controller invokes.
-
-    This class wraps a DistProfiler instance and provides methods to start/stop profiling
-    that can be dispatched across multiple ranks in a distributed training environment.
-
-    Args:
-        profiler (DistProfiler): The base distributed profiler instance to extend
-    """
-
-    def __init__(self, profiler: DistProfiler):
-        self.profiler = profiler
-
-    # from verl.single_controller.base.decorator import Dispatch, register
-
-    # @register(dispatch_mode=Dispatch.ONE_TO_ALL)
-    def start_profile(self, **kwargs) -> None:
-        """Start profiling for the current rank in the current training step."""
-        self.profiler.start(**kwargs)
-
-    # @register(dispatch_mode=Dispatch.ONE_TO_ALL)
-    def stop_profile(self) -> None:
-        """Stop profiling for the current rank in the current training step."""
-        self.profiler.stop()

@@ -34,7 +34,7 @@ from siirl.utils.extras.device import get_device_name, get_nccl_backend
 from siirl.utils.import_string import import_string
 import sys
 from copy import deepcopy
-from siirl.utils.debug import DistProfiler, DistProfilerExtension
+from siirl.utils.debug import DistProfiler
 device_name = get_device_name()
 
 def initialize_megatron(
@@ -187,7 +187,7 @@ class InitializationMixin:
     kl_ctrl_in_reward: Optional[Any]
     validate_tokenizer: Any
     role_worker_mapping: Dict[NodeRole, Type[Worker]]
-    _profiler: DistProfilerExtension
+    _profiler: DistProfiler
 
     def _initialize_worker(self):
         """Orchestrates the ordered initialization of all worker components."""
@@ -196,9 +196,7 @@ class InitializationMixin:
         self._setup_distributed_environment()
         self._initialize_core_components()
         self._initialize_node_workers()
-        # initialize_megatron(config=self.config.actor_rollout_ref.actor.megatron.to_dict())
-        # todo 可以吧DistProfiler藏起来
-        self._profiler = DistProfilerExtension(DistProfiler(rank=self._rank, config=self.config.profiler))
+        self._profiler = DistProfiler(rank=self._rank, config=self.config.profiler)
 
         if self._rank == 0:
             logger.info("Rank 0: Initializing tracking logger...")

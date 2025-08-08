@@ -15,7 +15,7 @@
 from .performance import GPUMemoryLogger, log_gpu_memory_usage
 from siirl.utils.extras.import_utils import is_nvtx_available
 from siirl.utils.extras.device import is_npu_available
-from siirl.utils.debug.profile import DistProfiler, DistProfilerExtension 
+from siirl.utils.debug.profile import DistProfiler
 
 if is_nvtx_available():
     from .profile import DistProfiler, mark_annotate, mark_end_range, mark_start_range
@@ -29,7 +29,6 @@ __all__ = [
     "GPUMemoryLogger",
     "log_gpu_memory_usage",
     "DistProfiler",
-    "DistProfilerExtension",
     "mark_annotate",
     "mark_end_range",
     "mark_start_range",

@@ -142,28 +142,24 @@ class NPUProfiler(DistProfiler):
     _define_count = 0
 
     def __init__(self, rank: int, config: ProfilerArguments, **kwargs):
-        self.this_step: bool = False
+        self.switch: bool = False
         self.config = config
-        self.this_rank: bool = False
+        self.match_rank: bool = True if config.all_ranks else rank in config.ranks
         self.profile_npu = None
-        if config.all_ranks:
-            self.this_rank = True
-        elif config.ranks:
-            self.this_rank = rank in config.ranks
 
     def start(self, **kwargs):
         role, profile_step = kwargs.get("role", None), kwargs.get("profile_step", None)
         profile_step = str(profile_step) if profile_step is not None else None
-        if self.this_rank:
-            self.this_step = True
+        if self.match_rank and self.config.enable:
+            self.switch = True
             if not self.config.discrete and NPUProfiler._define_count == 0:
                 self.profile_npu = get_npu_profiler(config=self.config, role=role, profile_step=profile_step)
                 self.profile_npu.start()
                 NPUProfiler._define_count += 1
 
     def stop(self):
-        if self.this_rank:
-            self.this_step = False
+        if self.match_rank and self.config.enable:
+            self.switch = False
             if not self.config.discrete and NPUProfiler._define_count == 1:
                 self.profile_npu.step()
                 self.profile_npu.stop()
@@ -187,22 +183,22 @@ class NPUProfiler(DistProfiler):
             @functools.wraps(func)
             def wrapper(self, *args, **kwargs):
                 profile_name = message or func.__name__
-                profile_this_role = True
-                discrete_mode = self._profiler.profiler.config.discrete
-                profile_enable = self._profiler.profiler.this_step
+                match_role = True
+                discrete_mode = self._profiler.config.discrete
+                profile_enable = self._profiler.switch
 
                 if not profile_enable:
                     return func(self, *args, **kwargs)
 
                 if profile_enable and role is not None:
-                    target_roles = self._profiler.profiler.config.roles
-                    profile_this_role = "all" in target_roles or role in target_roles
+                    target_roles = self._profiler.config.roles
+                    match_role = True if not discrete_mode else role in target_roles
 
                 if profile_enable:
                     if not discrete_mode:
                         mark_range = mark_start_range(message=profile_name)
                     else:
-                        if profile_this_role:
+                        if match_role:
                             profile_npu = get_npu_profiler(config=self.config, role=role)
                             profile_npu.start()
                             mark_range = mark_start_range(message=profile_name)
@@ -213,7 +209,7 @@ class NPUProfiler(DistProfiler):
                     if not discrete_mode:
                         mark_end_range(mark_range)
                     else:
-                        if profile_this_role:
+                        if match_role:
                             mark_end_range(mark_range)
                             profile_npu.step()
                             profile_npu.stop()

@@ -47,7 +47,7 @@ class NodeExecutorsMixin:
     _reduce_and_broadcast_metrics: Any
 
     # todo 确认颜色
-    @DistProfiler.annotate(color="red", role="generate")
+    @DistProfiler.annotate(role="generate")
     def generate(self, worker_group_index: int, batch: DataProto, **kwargs) -> NodeOutput:
         """Generates sequences for a training batch using the rollout model."""
         if self.rollout_mode == 'sync':
@@ -74,7 +74,7 @@ class NodeExecutorsMixin:
             return NodeOutput(batch=batch, metrics=metrics)
         return NodeOutput(batch=batch, metrics={})
 
-    @DistProfiler.annotate(color="yellow", role="compute_reward")
+    @DistProfiler.annotate(role="compute_reward")
     def compute_reward(self, batch: DataProto, tp_size: int, **kwargs) -> NodeOutput:
         """Calculates rewards for a batch of generated sequences."""
         # In current implementation, the reward node implicitly holds the rollout node's parallel settings;
@@ -95,7 +95,7 @@ class NodeExecutorsMixin:
             batch.batch["token_level_rewards"] = batch.batch["token_level_scores"]
         return NodeOutput(batch=batch, metrics=metrics)
 
-    @DistProfiler.annotate(color="blue", role="compute_old_log_prob")
+    @DistProfiler.annotate(role="compute_old_log_prob")
     def compute_old_log_prob(self, batch: DataProto, worker_group_index: int, **kwargs) -> NodeOutput:
         """Computes log probabilities from the actor model before the policy update."""
         if 'global_token_num' not in batch.meta_info:
@@ -121,18 +121,20 @@ class NodeExecutorsMixin:
                 metrics.update({"training/rollout_probs_diff_max": torch.max(rollout_probs_diff).item(), "training/rollout_probs_diff_mean": torch.mean(rollout_probs_diff).item(), "training/rollout_probs_diff_std": torch.std(rollout_probs_diff).item()})
         return NodeOutput(batch=processed_data, metrics=metrics)
 
-    @DistProfiler.annotate(color="blue", role="compute_ref_log_prob")
+    @DistProfiler.annotate(role="compute_ref_log_prob")
     def compute_ref_log_prob(self, batch: DataProto, worker_group_index: int, **kwargs) -> NodeOutput:
         """Computes log probabilities from the frozen reference model."""
         processed_data = self.agent_group_worker[worker_group_index][NodeRole.REFERENCE].compute_ref_log_prob(batch)
         metrics = processed_data.meta_info.get("metrics", {})
         return NodeOutput(batch=processed_data, metrics=metrics)
 
+    @DistProfiler.annotate(role="compute_value")
     def compute_value(self, batch: DataProto, worker_group_index: int, **kwargs) -> NodeOutput:
         """Computes value estimates from the critic model."""
         processed_data = self.agent_group_worker[worker_group_index][NodeRole.CRITIC].compute_values(batch)
         return NodeOutput(batch=processed_data)
 
+    @DistProfiler.annotate(role="compute_advantage")
     def compute_advantage(self, batch: DataProto, **kwargs) -> NodeOutput:
         """Computes advantages and returns for PPO using GAE."""
         adv_config = self.config.algorithm
@@ -158,6 +160,7 @@ class NodeExecutorsMixin:
             )
         )
 
+    @DistProfiler.annotate(role="train_critic")
     def train_critic(self, batch: DataProto, worker_group_index: int, **kwargs) -> NodeOutput:
         """Performs a single training step on the critic model."""
         processed_data = self.agent_group_worker[worker_group_index][NodeRole.CRITIC].update_critic(batch)
@@ -165,6 +168,7 @@ class NodeExecutorsMixin:
         metrics = self._reduce_and_broadcast_metrics(processed_data.meta_info.get("metrics"), process_group)
         return NodeOutput(batch=processed_data, metrics=metrics)
 
+    @DistProfiler.annotate(role="train_actor")
     def train_actor(self, batch: DataProto, worker_group_index: int, **kwargs) -> NodeOutput:
         """Performs a single training step on the actor (policy) model."""
         if self.config.trainer.critic_warmup > self.global_steps:

@@ -199,7 +199,7 @@ class NPUProfiler(DistProfiler):
                         mark_range = mark_start_range(message=profile_name)
                     else:
                         if match_role:
-                            profile_npu = get_npu_profiler(config=self.config, role=role)
+                            profile_npu = get_npu_profiler(config=self._profiler.config, role=role)
                             profile_npu.start()
                             mark_range = mark_start_range(message=profile_name)
 

@@ -97,7 +97,6 @@ class SiiRLArguments:
     custom_reward_function: CustomRewardArguments = field(default_factory=CustomRewardArguments)
     dag: DagArguments = field(default_factory=DataArguments)
     profiler: ProfilerArguments = field(default_factory=ProfilerArguments)
-    # todo 如何打通启动脚本
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)

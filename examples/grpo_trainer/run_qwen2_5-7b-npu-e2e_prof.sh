@@ -96,14 +96,14 @@ TRAINING_CMD=(
     trainer.default_local_dir=\$CKPT_PATH
     trainer.val_before_train=True
     trainer.device=npu
-	profiler.enable=True
-	profiler.save_path=\$PROFILE_PATH
-	profiler.level='level1'
-	profiler.ranks=[0]
-	profiler.profile_steps=[3]
-	profiler.discrete=False
-	profiler.with_cpu=True
-	profiler.with_memory=True
+    profiler.enable=True
+    profiler.save_path=\$PROFILE_PATH
+    profiler.level='level1'
+    profiler.ranks=[0]
+    profiler.profile_steps=[3]
+    profiler.discrete=False
+    profiler.with_cpu=True
+    profiler.with_memory=True
 )
 
 # ===================================================================================

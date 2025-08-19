@@ -13,7 +13,6 @@ __pycache__/
 *.py[cod]
 *$py.class
 dataset/*
-kernel_meta/*
 tensorflow/my_graph/*
 .idea/
 # C extensions

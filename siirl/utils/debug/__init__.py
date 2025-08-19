@@ -18,15 +18,12 @@ from siirl.utils.extras.device import is_npu_available
 from siirl.utils.debug.profile import DistProfiler, DistProfilerExtension 
 
 if is_nvtx_available():
-    pass
-    # todo
+    from .profile import DistProfiler, mark_annotate, mark_end_range, mark_start_range
 elif is_npu_available:
     from .mstx_profile import NPUProfiler as DistProfiler
     from .mstx_profile import mark_annotate, mark_end_range, mark_start_range
 else:
-    pass
-    # todo
-# 文档todo
+    from .profile import DistProfiler, mark_annotate, mark_end_range, mark_start_range
 
 __all__ = [
     "GPUMemoryLogger",

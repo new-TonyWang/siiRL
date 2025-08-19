@@ -19,6 +19,8 @@ import torch
 import torch.distributed
 
 from siirl.utils.params import ProfilerArguments
+from siirl.utils.extras.import_utils import is_nvtx_available
+from loguru import logger
 
 
 class Profiler:
@@ -167,7 +169,10 @@ def mark_annotate(
 class DistProfiler:
 
     def __init__(self, rank: int, config: ProfilerArguments, **kwargs):
-        pass
+        self.config = config
+        if self.config.enable and is_nvtx_available():
+            self.config.enable = False
+            logger.error("!!!!!!!!!!!!!!!Currently only support NPU profiling.!!!!!!!!!!!!!!!")
 
     def start(self, **kwargs):
         pass

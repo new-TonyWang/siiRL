@@ -13,9 +13,12 @@
 # limitations under the License.
 
 import os
+from typing import Callable, Optional
 
 import torch
 import torch.distributed
+
+from siirl.utils.params import ProfilerArguments
 
 
 class Profiler:
@@ -109,3 +112,106 @@ class Profiler:
         if self.check():
             print(f"[Profiler] Trace stopped for rank {self.rank}")
             self.skip_prof = True
+
+
+def mark_start_range(
+    message: Optional[str] = None,
+    color: Optional[str] = None,
+    domain: Optional[str] = None,
+    category: Optional[str] = None,
+) -> None:
+    """Start a profiling range marker (no-op implementation).
+
+    Args:
+        message (Optional[str]): Message to associate with the range marker.
+        color (Optional[str]): Color for the marker visualization.
+        domain (Optional[str]): Domain for the marker.
+        category (Optional[str]): Category for the marker.
+    """
+    pass
+
+
+def mark_end_range(range_id: str) -> None:
+    """End a profiling range marker (no-op implementation).
+
+    Args:
+        range_id (str): Identifier of the range to end.
+    """
+    pass
+
+
+def mark_annotate(
+    message: Optional[str] = None,
+    color: Optional[str] = None,
+    domain: Optional[str] = None,
+    category: Optional[str] = None,
+) -> Callable:
+    """Decorator to annotate a function with profiling markers (no-op implementation).
+
+    Args:
+        message (Optional[str]): Message to associate with the annotation.
+        color (Optional[str]): Color for the marker visualization.
+        domain (Optional[str]): Domain for the marker.
+        category (Optional[str]): Category for the marker.
+
+    Returns:
+        Callable: Decorator function that returns the original function unchanged.
+    """
+
+    def decorator(func):
+        return func
+
+    return decorator
+
+
+class DistProfiler:
+
+    def __init__(self, rank: int, config: ProfilerArguments, **kwargs):
+        pass
+
+    def start(self, **kwargs):
+        pass
+
+    def stop(self):
+        pass
+
+    @staticmethod
+    def annotate(
+        message: Optional[str] = None,
+        color: Optional[str] = None,
+        domain: Optional[str] = None,
+        category: Optional[str] = None,
+        **kwargs,
+    ) -> Callable:
+        def decorator(func):
+            return func
+
+        return decorator
+
+
+class DistProfilerExtension:
+    """An extension class for DistProfiler that provides distributed profiling capabilities.
+
+    It is intended for workers in verl that single controller invokes.
+
+    This class wraps a DistProfiler instance and provides methods to start/stop profiling
+    that can be dispatched across multiple ranks in a distributed training environment.
+
+    Args:
+        profiler (DistProfiler): The base distributed profiler instance to extend
+    """
+
+    def __init__(self, profiler: DistProfiler):
+        self.profiler = profiler
+
+    # from verl.single_controller.base.decorator import Dispatch, register
+
+    # @register(dispatch_mode=Dispatch.ONE_TO_ALL)
+    def start_profile(self, **kwargs) -> None:
+        """Start profiling for the current rank in the current training step."""
+        self.profiler.start(**kwargs)
+
+    # @register(dispatch_mode=Dispatch.ONE_TO_ALL)
+    def stop_profile(self) -> None:
+        """Stop profiling for the current rank in the current training step."""
+        self.profiler.stop()

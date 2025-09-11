@@ -16,13 +16,6 @@
 dag_id: "grpo_training_pipeline"
 description: "This is GRPO DAG workflow configured via YAML."
 
-actor1_config: &actor1_config
-  model.path: Qwen/Qwen2.5-7B-Instruct
-  rollout.log_prob_micro_batch_size_per_gpu: 16
-  rollout.tensor_model_parallel_size: 2
-  rollout.gpu_memory_utilization: 0.7
-  rollout.n: 16
-
 nodes:
   - node_id: "rollout_actor"
     node_type: "MODEL_INFERENCE"

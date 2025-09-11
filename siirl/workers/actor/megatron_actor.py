@@ -24,7 +24,7 @@ import logging
 import os
 from functools import partial
 from typing import Iterable
-from loguru import logger
+from transformers.utils import logging
 
 import torch
 import torch.distributed
@@ -49,7 +49,7 @@ from siirl.utils.model_utils.torch_functional import broadcast_dict_tensor
 from siirl.workers.actor import BasePPOActor
 
 __all__ = ["MegatronPPOActor"]
-
+logger = logging.get_logger(__file__)
 
 class MegatronPPOActor(BasePPOActor):
     def __init__(
@@ -127,7 +127,7 @@ class MegatronPPOActor(BasePPOActor):
             self.prof = None
         #TODO(Ping Zhang): remove the hard-code here once configuration is aligned.
         # self.use_fused_kernels = self.config.use_fused_kernels
-        self.use_fused_kernels = True
+        self.use_fused_kernels = False
         if self.use_fused_kernels:
             from siirl.models.mcore.model_forward_fused import patch_fused_forward
 

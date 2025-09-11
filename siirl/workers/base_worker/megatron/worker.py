@@ -16,7 +16,6 @@
 from siirl.workers.base_worker.base.worker import DistGlobalInfo, DistRankInfo, Worker
 from siirl.utils.params import ActorRolloutRefArguments
 
-
 class MegatronWorker(Worker):
     def __init__(self, cuda_visible_devices=None) -> None:
         super().__init__(cuda_visible_devices)

@@ -398,15 +398,16 @@ class RayTrainer:
                         # `ray.get()` retrieves the result of the future.
                         # CRITICAL: If the remote actor task failed with an exception,
                         # `ray.get()` will re-raise that exception here, allowing us to catch it.
+                        logger.success(f"Worker {worker_name} has finished its task graph. ")
                         result = ray.get(future)
                         logger.success(f"Worker {worker_name} has finished its task graph. Result: {result}")
 
                     # Specifically catch the case where a Ray actor process has died.
-                    except ray.exceptions.ActorDiedError:
-                        logger.error(f"FATAL: Worker {worker_name} died unexpectedly during its task. Halting execution.")
-                        # Re-raise the exception to stop the entire training job.
-                        # A dead worker is a critical failure that cannot be recovered from.
-                        raise
+                    # except ray.exceptions.ActorDiedError:
+                    #     logger.error(f"FATAL: Worker {worker_name} died unexpectedly during its task. Halting execution.")
+                    #     # Re-raise the exception to stop the entire training job.
+                    #     # A dead worker is a critical failure that cannot be recovered from.
+                    #     raise
                     # Catch any other exception that the worker might have thrown.
                     except Exception as e:
                         logger.error(f"FATAL: Worker {worker_name} failed with an exception: {e}")

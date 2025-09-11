@@ -32,8 +32,122 @@ from siirl.workers.dag.node import NodeRole, NodeType
 from siirl.workers.dag_worker.constants import DAGConstants
 from siirl.utils.extras.device import get_device_name, get_nccl_backend
 from siirl.utils.import_string import import_string
-
+import sys
+from copy import deepcopy
 device_name = get_device_name()
+
+def initialize_megatron(
+        extra_args_provider=None,
+        args_defaults={},
+        ignore_unknown_args=False,
+        allow_no_cuda=False,
+        skip_mpu_initialization=False,
+        get_embedding_ranks=None,
+        get_position_embedding_ranks=None,
+        config=None,
+):
+    """Set global variables, initialize distributed, and
+    set autoresume and random seeds.
+    `allow_no_cuda` should not be set unless using megatron for cpu only
+    data processing. In general this arg should not be set unless you know
+    what you are doing.
+    Returns a function to finalize distributed env initialization
+    (optionally, only when args.lazy_mpu_init == True)
+    """
+    def parse_args_from_config(config):
+        # model configs
+        # Parsing utils parameters.
+        for key, value in config.items():  # config is transformed into a dict
+            if isinstance(value, list):
+                sys.argv.append(f"--{key.replace('_', '-')}")
+                for i in value:
+                    sys.argv.append(f"{i}")
+            elif isinstance(value, bool):
+                if value:
+                    sys.argv.append(f"--{key.replace('_', '-')}")
+            elif value is None:
+                continue
+            else:
+                sys.argv.append(f"--{key.replace('_', '-')}")
+                sys.argv.append(f"{value}")    
+
+    origin_sys_argv = sys.argv
+    sys.argv = [sys.argv[0]]
+    parse_args_from_config(config)
+    print("sys.argv==",sys.argv)
+    # Initialize torch.compile global variables to avoid training-related patches affecting vLLM graph mode enabling.
+    # init_torch_compile(torch.compile)
+    # Note: Importing this line activates the megatron_adapter.
+    # from mindspeed_llm.training.arguments import parse_args_decorator
+    import mindspeed.megatron_adaptor
+    import megatron
+
+    args = megatron.training.arguments.parse_args()
+    sys.argv = origin_sys_argv
+
+    if not allow_no_cuda:
+        if not torch.cuda.is_available():
+            raise ValueError("Megatron requires CUDA.")
+
+    from megatron.core import parallel_state
+    from megatron.training import get_args
+    from megatron.training.arguments import validate_args
+    from megatron.training.checkpointing import load_args_from_checkpoint
+    from megatron.training.global_vars import set_global_variables
+    from megatron.training.initialize import _set_random_seed, \
+        _init_autoresume, _compile_dependencies, \
+        _initialize_tp_communicators
+
+    if args.use_checkpoint_args or args_defaults.get("use_checkpoint_args", False):
+        if args.load is None:
+            raise ValueError("--use-checkpoints-args requires --load argument.")
+        load_args_from_checkpoint(args)
+
+    validate_args(args, args_defaults)
+
+    set_global_variables(args)
+
+    # torch.distributed initialization
+    # def finish_mpu_init():
+    #     args = get_args()
+    #     # Pytorch distributed.
+    #     _initialize_distributed(get_embedding_ranks, get_position_embedding_ranks)
+
+    #     # Random seeds for reproducibility.
+    #     if args.rank == 0:
+    #         logger.info("> setting random seeds to {} ...".format(args.seed))
+    #     _set_random_seed(args.seed, args.data_parallel_random_init)
+    #     if args.use_ascend_mc2:
+    #         initialize_cfg_from_args(args)
+
+    # if skip_mpu_initialization:
+    #     return None
+    # return None
+    # args = get_args()
+    # if args.lazy_mpu_init:
+    #     args.use_cpu_initialization = True
+    #     # delayed initialization of DDP-related stuff
+    #     # We only set basic DDP globals
+    #     parallel_state.set_tensor_model_parallel_world_size(args.tensor_model_parallel_size)
+    #     # and return function for external DDP manager
+    #     # to call when it has DDP initialized
+    #     parallel_state.set_tensor_model_parallel_rank(args.rank)
+    #     return finish_mpu_init
+    # else:
+    #     # Megatron's MPU is the master. Complete initialization right away.
+    #     finish_mpu_init()
+
+    #     # Autoresume.
+    #     _init_autoresume()
+
+    #     # Compile dependencies.
+    #     _compile_dependencies()
+
+    #     if args.tp_comm_overlap:
+    #         _initialize_tp_communicators()
+
+    #     # No continuation function
+    #     return None
 
 class InitializationMixin:
     """Handles the initialization and setup logic for the DAGWorker."""
@@ -80,6 +194,7 @@ class InitializationMixin:
         self._setup_distributed_environment()
         self._initialize_core_components()
         self._initialize_node_workers()
+        # initialize_megatron(config=self.config.actor_rollout_ref.actor.megatron.to_dict())
 
         if self._rank == 0:
             logger.info("Rank 0: Initializing tracking logger...")

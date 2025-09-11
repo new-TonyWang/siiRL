@@ -18,6 +18,13 @@ from typing import Tuple
 
 import torch
 import torch_npu
+
+try:
+    import mindspeed
+    import mindspeed.megatron_adaptor
+except Exception as e:
+    print("does not find mindpseed")
+
 from torch_npu import npu_rotary_mul as apply_rotary_emb
 from transformers.models.qwen2_5_vl import modeling_qwen2_5_vl
 from transformers.models.qwen2_5_vl.modeling_qwen2_5_vl import Qwen2RMSNorm
